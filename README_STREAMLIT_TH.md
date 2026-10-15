@@ -30,3 +30,14 @@ GEMINI_MODEL = "gemini-2.5-flash"
 ห้าม commit Secrets หรือ API Key ลง GitHub
 
 ระบบระยะที่ 1 รองรับล็อกอิน, บันทึกสินค้าและลิงก์ Affiliate, และวิเคราะห์ Hook/ฉาก/Caption/Hashtag ด้วย Gemini ข้อมูลแยกตามผู้ใช้ใน Supabase และเปิดจากมือถือได้
+
+## Phase 1 workflow
+
+1. Product Lab บันทึกข้อมูลสินค้าที่ตรวจสอบได้
+2. Product Scout คำนวณ Opportunity Score ด้วยสูตรที่ตรวจสอบย้อนกลับได้
+3. Gemini ทำหน้าที่เป็นที่ปรึกษา สร้าง Hook, Script, Storyboard, Caption และความเสี่ยง
+4. Content Studio สร้างและบันทึก Production Package
+5. Video Factory สร้าง Video Job และส่งออก Prompt สำหรับ Google Flow/Meta AI Browser Connector หรือ API Worker
+6. Quality Gate ตรวจข้อมูลสินค้า, Hook, Storyboard, Caption, Affiliate Link และ Claim Safety
+
+ตัวเลขใน Dashboard มาจากข้อมูลที่ผู้ใช้บันทึก ไม่ใช่ตัวเลขตัวอย่าง ระบบยังต้องมี Worker แยกสำหรับควบคุมเบราว์เซอร์หรือเรียก Video API, สร้างเสียง และเรนเดอร์ MP4; หน้า Streamlit ไม่ควรถือรหัสผ่านหรือ Session Cookie ของ Google/Meta

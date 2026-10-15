@@ -6,6 +6,8 @@ from typing import Any
 import requests
 import streamlit as st
 
+from affiliate_core import content_pack, flow_package_text, quality_report, score_product
+
 st.set_page_config(page_title="Shopee Affiliate Intelligence", page_icon="🛍️", layout="wide")
 
 
@@ -147,19 +149,24 @@ def main() -> None:
     if st.sidebar.button("ออกจากระบบ"):
         st.session_state.clear()
         st.rerun()
-    page = st.sidebar.radio("เมนูหลัก", ["ภาพรวม", "Product Lab", "Content Studio", "Character Vault", "Quality Gate", "ตั้งค่า"])
+    page = st.sidebar.radio("เมนูหลัก", ["ภาพรวม", "Product Scout", "Product Lab", "Content Studio", "Video Factory", "Character Vault", "Quality Gate", "ตั้งค่า"])
     if page == "ภาพรวม":
         data = items()
         products = [x for x in data if x["kind"] == "product"]
+        product_scores = [score_product(x["payload"]) for x in products]
+        passed_count = sum(score.total >= 62 for score in product_scores)
+        ready_count = sum(score.total >= 80 for score in product_scores)
+        average_commission = (sum(float(x["payload"].get("commission", 0) or 0) for x in products) / len(products)) if products else 0
+        queued_jobs = sum(x["kind"] == "project" and x["payload"].get("subtype") == "video_job" and x["payload"].get("status") == "queued" for x in data)
         st.markdown('<div class="eyebrow">AI DAILY BRIEF</div>', unsafe_allow_html=True)
         left, right = st.columns([4, 1])
         with left:
             st.markdown('<div class="hero"><div><h1>ศูนย์บัญชาการรายได้</h1><p>ระบบประเมินโอกาสจากความต้องการ ความง่ายในการสาธิต ความน่าเชื่อถือ และกำไรต่อคลิป ไม่ได้ดูยอดขายอย่างเดียว</p></div><div class="score"><strong>89</strong><small>Opportunity</small></div></div>', unsafe_allow_html=True)
         with right:
-            st.markdown('<div class="metric-card"><small>สินค้าผ่านเกณฑ์</small><strong>12</strong><small>จากรายการที่บันทึก</small></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card"><small>สินค้าผ่านเกณฑ์</small><strong>{passed_count}</strong><small>จาก {len(products)} รายการ</small></div>', unsafe_allow_html=True)
         st.markdown('<div class="section-title"><span class="eyebrow">ภาพรวมวันนี้</span></div>', unsafe_allow_html=True)
         cols = st.columns(4)
-        for col, label, value, note in zip(cols, ["สินค้าในระบบ", "กำไรคาดการณ์/คลิป", "Conversion Model", "คลิปรอตรวจ"], [len(products), "฿46", "4.8%", "3"], ["รายการ", "หลังต้นทุน AI", "เป้าหมายเริ่มต้น", "Quality Gate"]):
+        for col, label, value, note in zip(cols, ["สินค้าในระบบ", "ค่าคอมเฉลี่ย", "ผลิตทันที", "งานวิดีโอในคิว"], [len(products), f"฿{average_commission:,.2f}", ready_count, queued_jobs], ["รายการจริง", "จากข้อมูลที่กรอก", "คะแนน ≥ 80", "รอ Worker"]):
             col.markdown(f'<div class="metric-card"><small>{label}</small><strong>{value}</strong><small>{note}</small></div>', unsafe_allow_html=True)
         st.markdown('<div class="section-title"><span class="eyebrow">จัดอันดับโดย AI</span><h2>โอกาสทำเงินวันนี้</h2></div>', unsafe_allow_html=True)
         c1, c2 = st.columns([1.2, 1])
@@ -177,6 +184,25 @@ def main() -> None:
                 st.write("ระบบจะเทียบความต้องการ, Visual Proof, ความน่าเชื่อถือ และค่าคอม ก่อนแนะนำให้ผลิต")
                 st.progress(.89, text="Opportunity Index 89/100")
                 st.markdown('<div class="note">ตรวจราคา ค่าคอม และคำเคลมกับหน้าสินค้าจริงก่อนโพสต์ทุกครั้ง</div>', unsafe_allow_html=True)
+    elif page == "Product Scout":
+        st.markdown('<div class="eyebrow">PRODUCT SCOUT</div>', unsafe_allow_html=True)
+        st.title("จัดอันดับสินค้าที่ควรทำวิดีโอ")
+        st.caption("คะแนนส่วนนี้คำนวณจากข้อมูลที่บันทึกจริง Gemini ใช้อธิบายและวางกลยุทธ์ แต่แก้ตัวเลขต้นทางไม่ได้")
+        products = [x for x in items() if x["kind"] == "product"]
+        ranked = sorted(products, key=lambda row: score_product(row["payload"]).total, reverse=True)
+        if not ranked:
+            st.info("ยังไม่มีสินค้า เพิ่มสินค้าใน Product Lab ก่อน")
+        for index, row in enumerate(ranked, 1):
+            product = row["payload"]
+            score = score_product(product)
+            with st.container(border=True):
+                a, b, c, d = st.columns([4, 1, 1, 1])
+                a.markdown(f"**{index}. {product.get('name', 'สินค้า')}**  \n{product.get('category', 'ไม่ระบุหมวด')}")
+                b.metric("ราคา", f"฿{float(product.get('price', 0) or 0):,.0f}")
+                c.metric("ค่าคอม", f"฿{float(product.get('commission', 0) or 0):,.2f}")
+                d.metric("คะแนน", score.total)
+                st.progress(score.total / 100, text=score.verdict)
+                st.caption(f"Demand {score.demand} · Visual proof {score.visual_proof} · Impulse {score.impulse} · Trust {score.trust} · Risk {score.risk}")
     elif page == "Product Lab":
         st.markdown('<div class="eyebrow">PRODUCT LAB</div>', unsafe_allow_html=True)
         st.title("วางลิงก์ แล้วให้ระบบคิดแทนคุณ")
@@ -217,6 +243,7 @@ def main() -> None:
                         result = analyse(choices[selected]["payload"], goal)
                     if result:
                         st.session_state.analysis = result
+                        st.session_state.content_pack = content_pack(choices[selected]["payload"], result, character, mode)
             with right:
                 st.markdown('<div class="phone"><div class="phone-screen"><small>PREVIEW · 9:16</small><h3 style="color:white;margin-top:auto">ตัวอย่างคลิป 18 วินาที</h3><div class="caption">ปัญหานี้แก้ได้ในคลิปเดียว</div></div></div>', unsafe_allow_html=True)
             result = st.session_state.get("analysis")
@@ -228,28 +255,64 @@ def main() -> None:
                 st.write("**Caption:**", result.get("caption", "-"))
                 st.write("**Hashtags:**", " ".join(result.get("hashtags", [])))
                 st.json(result.get("scenes", []))
+                if st.button("บันทึก Content Pack"):
+                    save("project", st.session_state.content_pack)
+    elif page == "Video Factory":
+        st.markdown('<div class="eyebrow">VIDEO FACTORY</div>', unsafe_allow_html=True)
+        st.title("ส่งงานสร้างคลิปและเตรียมไฟล์ผลิต")
+        pack = st.session_state.get("content_pack")
+        if not pack:
+            projects = [x for x in items() if x["kind"] == "project" and x["payload"].get("schema_version") == 1]
+            pack = projects[0]["payload"] if projects else None
+        if not pack:
+            st.warning("สร้างและบันทึก Content Pack ใน Content Studio ก่อน")
+        else:
+            provider = st.selectbox("ช่องทางสร้างวิดีโอ", ["Google Flow · Browser Connector", "Meta AI · Browser Connector", "Google Veo API", "Grok Imagine API"])
+            st.write("**สินค้า:**", pack["product"].get("name", "-"))
+            st.write("**Hook:**", pack["analysis"].get("hook", "-"))
+            st.write("**สถานะ:** พร้อมจัดส่งเป็นงานผลิต")
+            prompt_text = flow_package_text(pack)
+            st.text_area("Master Video Prompt", prompt_text, height=260)
+            st.download_button("ดาวน์โหลด Production Package", json.dumps(pack, ensure_ascii=False, indent=2), file_name="production-package.json", mime="application/json")
+            st.download_button("ดาวน์โหลด Prompt สำหรับ Flow/Meta", prompt_text, file_name="video-prompt.txt", mime="text/plain")
+            if st.button("สร้าง Video Job", type="primary"):
+                job = {"subtype": "video_job", "provider": provider, "status": "queued", "content_pack": pack}
+                save("project", job)
+                st.success("สร้างงานแล้ว — Browser Connector/API Worker จะรับงานเมื่อเชื่อมต่อ")
     elif page == "Character Vault":
         st.markdown('<div class="eyebrow">CHARACTER VAULT</div>', unsafe_allow_html=True)
         st.title("ตัวละครที่คนดูจำได้")
         st.caption("เฟสนี้เก็บโปรไฟล์ตัวละครไว้ก่อน เพื่อเชื่อม image-to-video และ voice ในขั้นต่อไป")
         a, b = st.columns(2)
         with a:
-            st.file_uploader("อัปโหลดรูปตัวละคร", type=["png", "jpg", "jpeg"])
-            st.text_input("ชื่อตัวละคร", "Character A")
-            st.text_area("บุคลิก / โทนเสียง", "รีวิวจริงใจ กระชับ ไม่กล่าวอ้างเกินจริง")
-            st.button("บันทึก Character Profile", type="primary")
+            character_file = st.file_uploader("อัปโหลดรูปตัวละคร", type=["png", "jpg", "jpeg"])
+            character_name = st.text_input("ชื่อตัวละคร", "Character A")
+            character_tone = st.text_area("บุคลิก / โทนเสียง", "รีวิวจริงใจ กระชับ ไม่กล่าวอ้างเกินจริง")
+            if st.button("บันทึก Character Profile", type="primary"):
+                save("character", {"name": character_name, "tone": character_tone, "reference_filename": character_file.name if character_file else "", "asset_status": "ต้องเชื่อม Supabase Storage"})
         with b:
             st.markdown('<div class="panel"><span class="tag">IDENTITY LOCKED</span><h3>Character A</h3><p>รีวิวจริงใจ · โทนเป็นมิตร</p><p>ภาพต้นแบบ: พร้อมใช้เป็น reference เมื่อเชื่อม video provider</p></div>', unsafe_allow_html=True)
     elif page == "Quality Gate":
         st.markdown('<div class="eyebrow">QUALITY GATE</div>', unsafe_allow_html=True)
         st.title("ตรวจทุกอย่างก่อนเสียความน่าเชื่อถือ")
         st.caption("สินค้า ตัวละคร คำเคลม และ CTA ต้องผ่านเกณฑ์ก่อน Export")
-        with st.container(border=True):
-            st.metric("Quality Score", 92)
-            for label, value in [("ความถูกต้องสินค้า", .97), ("ความแข็งแรงของ Hook", .88), ("ความชัดเจน CTA", .91), ("ความคงที่ตัวละคร", .93), ("ความปลอดภัยคำเคลม", .96)]:
-                st.progress(value, text=f"{label} · {round(value*100)}")
-            st.markdown('<div class="note">ผ่านเกณฑ์เบื้องต้น แต่ต้องตรวจราคา ค่าคอม และรายละเอียดหน้าสินค้าจริงก่อนโพสต์</div>', unsafe_allow_html=True)
-            st.button("อนุมัติ Export", type="primary")
+        pack = st.session_state.get("content_pack")
+        if not pack:
+            projects = [x for x in items() if x["kind"] == "project" and x["payload"].get("schema_version") == 1]
+            pack = projects[0]["payload"] if projects else None
+        if not pack:
+            st.warning("ยังไม่มี Content Pack ให้ตรวจ")
+        else:
+            report = quality_report(pack)
+            with st.container(border=True):
+                st.metric("Quality Score", report["score"])
+                for label, value in report["checks"].items():
+                    st.progress(value / 100, text=f"{label} · {value}")
+                if report["passed"]:
+                    st.success("ผ่านเกณฑ์ข้อมูลและคอนเทนต์ พร้อมส่งสร้างวิดีโอ")
+                    st.button("อนุมัติ Export", type="primary")
+                else:
+                    st.error("ยังไม่ผ่านเกณฑ์ ห้ามส่งผลิตจนกว่าหัวข้อที่ต่ำกว่า 80 จะได้รับการแก้ไข")
     else:
         st.title("ตั้งค่า")
         st.write("ผู้ใช้:", st.session_state.user.get("email"))
