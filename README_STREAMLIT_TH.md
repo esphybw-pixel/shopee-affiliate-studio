@@ -41,3 +41,11 @@ GEMINI_MODEL = "gemini-2.5-flash"
 6. Quality Gate ตรวจข้อมูลสินค้า, Hook, Storyboard, Caption, Affiliate Link และ Claim Safety
 
 ตัวเลขใน Dashboard มาจากข้อมูลที่ผู้ใช้บันทึก ไม่ใช่ตัวเลขตัวอย่าง ระบบยังต้องมี Worker แยกสำหรับควบคุมเบราว์เซอร์หรือเรียก Video API, สร้างเสียง และเรนเดอร์ MP4; หน้า Streamlit ไม่ควรถือรหัสผ่านหรือ Session Cookie ของ Google/Meta
+
+## Google Flow / Meta AI Browser Connector
+
+โฟลเดอร์ `browser_connector` เป็น Chrome Extension รุ่นแรกสำหรับรับงานจาก `video_jobs` โดยใช้ Google/Meta Session ที่ผู้ใช้ล็อกอินไว้เอง
+
+ก่อนใช้ต้องรัน `supabase_schema.sql` รุ่นล่าสุดอีกครั้ง แล้วติดตั้ง Extension ตาม `browser_connector/README_TH.md` จากนั้นสร้าง Connector Code ที่หน้า **ตั้งค่า** ของ Web App
+
+รุ่นแรกทำได้: รับงาน, เปิด Provider, ใส่ Prompt และส่งสถานะกลับระบบ ผู้ใช้ยังต้องตรวจรูปอ้างอิง/ค่าตั้งและกด Generate เองจนกว่าจะทดสอบ Adapter กับหน้า Provider จริงเรียบร้อย

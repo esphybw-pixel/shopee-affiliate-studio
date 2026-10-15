@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><style>
+body{font-family:Arial,sans-serif;width:340px;margin:0;padding:18px;background:#f6f8f4;color:#17211d}h2{margin:0 0 12px}label{display:block;font-size:12px;font-weight:700;margin-top:10px}input{box-sizing:border-box;width:100%;padding:9px;border:1px solid #cfd8d1;border-radius:8px;margin-top:4px}button{width:100%;margin-top:10px;padding:10px;border:0;border-radius:8px;background:#237a61;color:white;font-weight:700;cursor:pointer}.secondary{background:#24332c}.danger{background:#a6463b}#status{font-size:12px;white-space:pre-wrap;margin-top:10px;padding:9px;background:white;border-radius:8px}</style></head>
+<body><h2>Video Connector</h2>
+<label>Supabase URL<input id="url" placeholder="https://PROJECT.supabase.co"></label>
+<label>Publishable/Anon Key<input id="key" type="password"></label>
+<label>Connector Code<input id="secret" type="password"></label>
+<button id="save">บันทึกการเชื่อมต่อ</button>
+<button id="poll" class="secondary">ตรวจงานตอนนี้</button>
+<button id="prepare" class="secondary">ใส่ Prompt ในหน้าปัจจุบัน</button>
+<button id="complete">ทำเครื่องหมายว่างานเสร็จ</button>
+<button id="failed" class="danger">ทำเครื่องหมายว่าล้มเหลว</button>
+<div id="status">ยังไม่ได้ตรวจสอบ</div><script src="popup.js"></script></body></html>

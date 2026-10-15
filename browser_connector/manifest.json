@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Shopee Affiliate Video Connector",
+  "version": "0.1.0",
+  "description": "Receives approved video jobs and assists Google Flow or Meta AI using your existing browser session.",
+  "permissions": ["alarms", "storage", "tabs", "scripting"],
+  "host_permissions": [
+    "https://*.supabase.co/*",
+    "https://labs.google/*",
+    "https://*.google.com/*",
+    "https://www.meta.ai/*"
+  ],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_popup": "popup.html", "default_title": "Video Connector"},
+  "content_scripts": [
+    {
+      "matches": ["https://labs.google/*", "https://*.google.com/*", "https://www.meta.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import json
 import os
+import secrets as pysecrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -80,6 +81,14 @@ def auth(path: str, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
 def db(method: str, token: str, params: dict[str, str] | None = None, payload: dict[str, Any] | None = None) -> tuple[bool, Any]:
     try:
         response = requests.request(method, f"{SUPABASE_URL}/rest/v1/workspace_items", headers={**headers(token), "Prefer": "return=representation"}, params=params, json=payload, timeout=30)
+        return response.ok, response.json() if response.content else None
+    except requests.RequestException as exc:
+        return False, {"error": str(exc)}
+
+
+def supabase_rest(path: str, method: str = "GET", payload: dict[str, Any] | None = None, params: dict[str, str] | None = None) -> tuple[bool, Any]:
+    try:
+        response = requests.request(method, f"{SUPABASE_URL}/rest/v1/{path}", headers={**headers(st.session_state.token), "Prefer": "return=representation"}, params=params, json=payload, timeout=30)
         return response.ok, response.json() if response.content else None
     except requests.RequestException as exc:
         return False, {"error": str(exc)}
@@ -277,8 +286,11 @@ def main() -> None:
             st.download_button("ดาวน์โหลด Prompt สำหรับ Flow/Meta", prompt_text, file_name="video-prompt.txt", mime="text/plain")
             if st.button("สร้าง Video Job", type="primary"):
                 job = {"subtype": "video_job", "provider": provider, "status": "queued", "content_pack": pack}
-                save("project", job)
-                st.success("สร้างงานแล้ว — Browser Connector/API Worker จะรับงานเมื่อเชื่อมต่อ")
+                ok, data = supabase_rest("video_jobs", "POST", {"provider": provider, "payload": job})
+                if ok:
+                    st.success("สร้างงานแล้ว — Browser Connector/API Worker จะรับงานเมื่อเชื่อมต่อ")
+                else:
+                    st.error(f"สร้างงานไม่สำเร็จ: {data} กรุณารัน SQL schema รุ่นล่าสุดใน Supabase")
     elif page == "Character Vault":
         st.markdown('<div class="eyebrow">CHARACTER VAULT</div>', unsafe_allow_html=True)
         st.title("ตัวละครที่คนดูจำได้")
@@ -319,6 +331,21 @@ def main() -> None:
         st.write("ฐานข้อมูล:", "Supabase" if SUPABASE_URL else "ยังไม่ตั้งค่า")
         st.write("Gemini:", GEMINI_MODEL if GEMINI_API_KEY else "ยังไม่ตั้งค่า API Key")
         st.info("API Key อยู่ใน Streamlit Secrets เท่านั้น ไม่อยู่ใน GitHub")
+        st.subheader("Browser Connector")
+        st.caption("สร้างรหัสเชื่อมต่อสำหรับ Chrome Extension รหัสนี้ไม่ใช่รหัสผ่าน Google/Meta")
+        device_name = st.text_input("ชื่อเครื่อง", "Chrome Production Worker")
+        if st.button("สร้าง Connector Code"):
+            connector_secret = pysecrets.token_urlsafe(32)
+            ok, data = supabase_rest("rpc/register_connector_device", "POST", {"p_name": device_name, "p_secret": connector_secret})
+            if ok:
+                st.session_state.connector_secret = connector_secret
+                st.success("สร้างสำเร็จ กรุณาคัดลอกรหัสนี้ไปใส่ใน Extension รหัสจะแสดงใน Session นี้เท่านั้น")
+            else:
+                st.error(f"สร้างไม่สำเร็จ: {data} กรุณารัน SQL schema รุ่นล่าสุดใน Supabase")
+        if st.session_state.get("connector_secret"):
+            st.code(st.session_state.connector_secret, language=None)
+            connector_config = {"supabaseUrl": SUPABASE_URL, "supabaseAnonKey": SUPABASE_ANON_KEY, "connectorSecret": st.session_state.connector_secret}
+            st.download_button("ดาวน์โหลด Connector Config", json.dumps(connector_config, indent=2), file_name="shopee-connector-config.json", mime="application/json")
 
 
 if st.session_state.get("user"):

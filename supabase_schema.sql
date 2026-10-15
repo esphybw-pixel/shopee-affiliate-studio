@@ -7,6 +7,10 @@ create table if not exists public.workspace_items (
 );
 
 alter table public.workspace_items enable row level security;
+drop policy if exists "workspace read own" on public.workspace_items;
+drop policy if exists "workspace insert own" on public.workspace_items;
+drop policy if exists "workspace update own" on public.workspace_items;
+drop policy if exists "workspace delete own" on public.workspace_items;
 create policy "workspace read own" on public.workspace_items for select using (auth.uid() = user_id);
 create policy "workspace insert own" on public.workspace_items for insert with check (auth.uid() = user_id);
 create policy "workspace update own" on public.workspace_items for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -19,3 +23,98 @@ $$;
 drop trigger if exists workspace_items_user_id on public.workspace_items;
 create trigger workspace_items_user_id before insert on public.workspace_items
 for each row execute function public.set_workspace_user_id();
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.connector_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  secret_hash text not null unique,
+  enabled boolean not null default true,
+  last_seen_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.video_jobs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null,
+  payload jsonb not null,
+  status text not null default 'queued' check (status in ('queued','claimed','needs_user','processing','complete','failed','cancelled')),
+  claimed_by uuid references public.connector_devices(id) on delete set null,
+  result_url text,
+  error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.connector_devices enable row level security;
+alter table public.video_jobs enable row level security;
+
+drop policy if exists "connector read own" on public.connector_devices;
+drop policy if exists "connector insert own" on public.connector_devices;
+drop policy if exists "connector update own" on public.connector_devices;
+drop policy if exists "video jobs read own" on public.video_jobs;
+drop policy if exists "video jobs insert own" on public.video_jobs;
+drop policy if exists "video jobs update own" on public.video_jobs;
+create policy "connector read own" on public.connector_devices for select using (auth.uid() = user_id);
+create policy "connector insert own" on public.connector_devices for insert with check (auth.uid() = user_id);
+create policy "connector update own" on public.connector_devices for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "video jobs read own" on public.video_jobs for select using (auth.uid() = user_id);
+create policy "video jobs insert own" on public.video_jobs for insert with check (auth.uid() = user_id);
+create policy "video jobs update own" on public.video_jobs for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create or replace function public.register_connector_device(p_name text, p_secret text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare device_id uuid;
+begin
+  if auth.uid() is null then raise exception 'authentication required'; end if;
+  insert into public.connector_devices(user_id, name, secret_hash)
+  values (auth.uid(), p_name, encode(digest(p_secret, 'sha256'), 'hex'))
+  returning id into device_id;
+  return device_id;
+end;
+$$;
+
+create or replace function public.claim_next_video_job(p_secret text)
+returns setof public.video_jobs language plpgsql security definer set search_path = public as $$
+declare device public.connector_devices%rowtype;
+declare target_id uuid;
+begin
+  select * into device from public.connector_devices
+  where secret_hash = encode(digest(p_secret, 'sha256'), 'hex') and enabled = true;
+  if not found then return; end if;
+
+  update public.connector_devices set last_seen_at = now() where id = device.id;
+  select id into target_id from public.video_jobs
+  where user_id = device.user_id and status = 'queued'
+  order by created_at asc for update skip locked limit 1;
+  if target_id is null then return; end if;
+
+  return query update public.video_jobs
+  set status = 'claimed', claimed_by = device.id, updated_at = now()
+  where id = target_id returning *;
+end;
+$$;
+
+create or replace function public.update_connector_video_job(
+  p_secret text, p_job_id uuid, p_status text, p_result_url text default null, p_error text default null
+)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare device public.connector_devices%rowtype;
+begin
+  select * into device from public.connector_devices
+  where secret_hash = encode(digest(p_secret, 'sha256'), 'hex') and enabled = true;
+  if not found then return false; end if;
+  if p_status not in ('claimed','needs_user','processing','complete','failed') then return false; end if;
+  update public.video_jobs set status = p_status, result_url = p_result_url,
+    error = p_error, updated_at = now()
+  where id = p_job_id and user_id = device.user_id and claimed_by = device.id;
+  return found;
+end;
+$$;
+
+grant execute on function public.claim_next_video_job(text) to anon, authenticated;
+grant execute on function public.update_connector_video_job(text, uuid, text, text, text) to anon, authenticated;
+grant execute on function public.register_connector_device(text, text) to authenticated;
