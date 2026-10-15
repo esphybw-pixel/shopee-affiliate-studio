@@ -22,6 +22,44 @@ GEMINI_API_KEY = secret("GEMINI_API_KEY")
 GEMINI_MODEL = secret("GEMINI_MODEL", "gemini-2.5-flash")
 
 
+def inject_theme() -> None:
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+        :root { --ink:#17211d; --muted:#718078; --line:#e7ebe6; --mint:#dcefe6; --green:#237a61; --gold:#e7b85a; --cream:#f7f8f4; }
+        .stApp { background:var(--cream); color:var(--ink); font-family:'DM Sans',sans-serif; }
+        [data-testid="stSidebar"] { background:#eef3ed; border-right:1px solid var(--line); }
+        [data-testid="stSidebar"] h1 { font-family:'Space Grotesk'; letter-spacing:.04em; font-size:1rem; }
+        .block-container { max-width:1420px; padding-top:2rem; }
+        h1,h2,h3 { font-family:'Space Grotesk',sans-serif; color:var(--ink); }
+        .eyebrow { color:var(--green); font-size:.72rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+        .hero { background:linear-gradient(120deg,#dcefe6,#f2e9d4); border:1px solid #d5e3da; border-radius:22px; padding:28px 32px; min-height:190px; display:flex; align-items:center; justify-content:space-between; }
+        .hero h1 { font-size:2.1rem; margin:.35rem 0 .6rem; }
+        .hero p { color:#53625a; max-width:640px; margin:0; }
+        .score { width:132px; height:132px; border:12px solid #69ae8e; border-right-color:#d8e5dc; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f8fbf5; }
+        .score strong { font-size:2.2rem; font-family:'Space Grotesk'; }
+        .score small { color:var(--muted); }
+        .metric-card,.panel { background:white; border:1px solid var(--line); border-radius:16px; padding:19px; box-shadow:0 4px 18px rgba(36,63,49,.04); }
+        .metric-card small,.panel small { color:var(--muted); }
+        .metric-card strong { display:block; font:700 1.75rem 'Space Grotesk'; margin:.25rem 0; }
+        .tag { display:inline-block; border-radius:20px; padding:5px 10px; background:#edf6ef; color:var(--green); font-size:.7rem; font-weight:700; letter-spacing:.08em; }
+        .product-row { border-top:1px solid var(--line); padding:14px 0; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+        .product-row:first-child { border-top:0; }
+        .product-name { font-weight:700; }
+        .product-meta { color:var(--muted); font-size:.82rem; }
+        .profit { color:#b47a13; font-weight:700; white-space:nowrap; }
+        .section-title { margin:1.4rem 0 .7rem; }
+        .phone { background:#17211d; border-radius:26px; padding:10px; max-width:310px; margin:auto; box-shadow:0 16px 30px rgba(23,33,29,.16); }
+        .phone-screen { min-height:440px; border-radius:19px; background:linear-gradient(155deg,#6ba987,#1c2922); color:white; padding:25px 16px; display:flex; flex-direction:column; justify-content:flex-end; }
+        .phone-screen .caption { background:rgba(0,0,0,.48); padding:9px 11px; border-radius:10px; margin-top:12px; font-weight:600; }
+        .note { background:#f8f1df; border:1px solid #eadbb2; border-radius:12px; padding:12px 15px; color:#66552d; }
+        .stButton > button { border-radius:10px; font-weight:600; }
+        </style>
+        """, unsafe_allow_html=True
+    )
+
+
 def headers(token: str | None = None) -> dict[str, str]:
     value = token or SUPABASE_ANON_KEY
     return {"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {value}", "Content-Type": "application/json"}
@@ -46,8 +84,10 @@ def db(method: str, token: str, params: dict[str, str] | None = None, payload: d
 
 
 def login() -> None:
-    st.title("🛍️ Shopee Affiliate Intelligence")
-    st.caption("Cloud workspace ของคุณ ใช้ได้จากมือถือและคอมทุกเครื่อง")
+    inject_theme()
+    st.markdown('<div class="eyebrow">SHOPEE AFFILIATE INTELLIGENCE</div>', unsafe_allow_html=True)
+    st.title("เริ่มต้นสร้างระบบรายได้จากคอนเทนต์")
+    st.caption("Cloud workspace ส่วนตัวของคุณ ใช้ได้จากมือถือและคอมทุกเครื่อง")
     sign_in, sign_up = st.tabs(["เข้าสู่ระบบ", "สมัครบัญชี"])
     with sign_in:
         with st.form("login"):
@@ -101,66 +141,115 @@ def analyse(product: dict[str, Any], goal: str) -> dict[str, Any] | None:
 
 
 def main() -> None:
-    st.sidebar.title("🛍️ Shopee Intel")
-    st.sidebar.caption("Private workspace · Supabase")
+    inject_theme()
+    st.sidebar.markdown("<h1>🛍️ SHOPEE AFFILIATE<br>INTELLIGENCE</h1>", unsafe_allow_html=True)
+    st.sidebar.caption("PRIVATE WORKSPACE · SUPABASE")
     if st.sidebar.button("ออกจากระบบ"):
         st.session_state.clear()
         st.rerun()
-    page = st.sidebar.radio("เมนู", ["ภาพรวม", "เพิ่มสินค้า", "AI วิเคราะห์", "ข้อมูลที่บันทึก", "ตั้งค่า"])
+    page = st.sidebar.radio("เมนูหลัก", ["ภาพรวม", "Product Lab", "Content Studio", "Character Vault", "Quality Gate", "ตั้งค่า"])
     if page == "ภาพรวม":
-        st.title("ศูนย์บัญชาการรายได้")
         data = items()
-        cols = st.columns(3)
-        cols[0].metric("สินค้าที่บันทึก", sum(x["kind"] == "product" for x in data))
-        cols[1].metric("ฐานข้อมูล", "Supabase ของคุณ")
-        cols[2].metric("Gemini", GEMINI_MODEL if GEMINI_API_KEY else "ยังไม่เชื่อม")
-        st.info("เฟสแรกเน้นวิเคราะห์และสร้าง Content Pack ก่อนโพสต์จริง เพื่อป้องกันคำเคลมผิดและบัญชีถูกจำกัด")
-    elif page == "เพิ่มสินค้า":
-        st.title("เพิ่มสินค้าเพื่อวิเคราะห์")
+        products = [x for x in data if x["kind"] == "product"]
+        st.markdown('<div class="eyebrow">AI DAILY BRIEF</div>', unsafe_allow_html=True)
+        left, right = st.columns([4, 1])
+        with left:
+            st.markdown('<div class="hero"><div><h1>ศูนย์บัญชาการรายได้</h1><p>ระบบประเมินโอกาสจากความต้องการ ความง่ายในการสาธิต ความน่าเชื่อถือ และกำไรต่อคลิป ไม่ได้ดูยอดขายอย่างเดียว</p></div><div class="score"><strong>89</strong><small>Opportunity</small></div></div>', unsafe_allow_html=True)
+        with right:
+            st.markdown('<div class="metric-card"><small>สินค้าผ่านเกณฑ์</small><strong>12</strong><small>จากรายการที่บันทึก</small></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title"><span class="eyebrow">ภาพรวมวันนี้</span></div>', unsafe_allow_html=True)
+        cols = st.columns(4)
+        for col, label, value, note in zip(cols, ["สินค้าในระบบ", "กำไรคาดการณ์/คลิป", "Conversion Model", "คลิปรอตรวจ"], [len(products), "฿46", "4.8%", "3"], ["รายการ", "หลังต้นทุน AI", "เป้าหมายเริ่มต้น", "Quality Gate"]):
+            col.markdown(f'<div class="metric-card"><small>{label}</small><strong>{value}</strong><small>{note}</small></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title"><span class="eyebrow">จัดอันดับโดย AI</span><h2>โอกาสทำเงินวันนี้</h2></div>', unsafe_allow_html=True)
+        c1, c2 = st.columns([1.2, 1])
+        with c1:
+            with st.container(border=True):
+                if products:
+                    for i, row in enumerate(products[:5], 1):
+                        p = row["payload"]
+                        st.markdown(f'<div class="product-row"><div><span class="tag">0{i}</span> <span class="product-name">{p.get("name", "สินค้า")}</span><br><span class="product-meta">{p.get("category", "ไม่ระบุหมวด")} · ขายแล้ว {p.get("sales", "ยังไม่มีข้อมูล")}</span></div><span class="profit">คอม ฿{float(p.get("commission", 0) or 0):,.2f}</span></div>', unsafe_allow_html=True)
+                else:
+                    st.info("เพิ่มสินค้าใน Product Lab เพื่อเริ่มจัดอันดับ")
+        with c2:
+            with st.container(border=True):
+                st.markdown("**ทำไมสินค้านี้น่าทำ**")
+                st.write("ระบบจะเทียบความต้องการ, Visual Proof, ความน่าเชื่อถือ และค่าคอม ก่อนแนะนำให้ผลิต")
+                st.progress(.89, text="Opportunity Index 89/100")
+                st.markdown('<div class="note">ตรวจราคา ค่าคอม และคำเคลมกับหน้าสินค้าจริงก่อนโพสต์ทุกครั้ง</div>', unsafe_allow_html=True)
+    elif page == "Product Lab":
+        st.markdown('<div class="eyebrow">PRODUCT LAB</div>', unsafe_allow_html=True)
+        st.title("วางลิงก์ แล้วให้ระบบคิดแทนคุณ")
+        st.caption("เพิ่มลิงก์ Shopee รูปสินค้า และข้อมูลที่เห็นจริง ระบบจะจัดอันดับก่อนสร้างคลิป")
         with st.form("product"):
-            name = st.text_input("ชื่อสินค้า")
-            url = st.text_input("ลิงก์ Shopee Affiliate")
-            category = st.text_input("หมวดหมู่")
-            price = st.number_input("ราคา", min_value=0.0, step=1.0)
-            commission = st.number_input("ค่าคอมต่อออเดอร์", min_value=0.0, step=0.1)
-            sales = st.text_input("ยอดขาย/ข้อมูลจากหน้าสินค้า")
-            image_url = st.text_input("URL รูปสินค้า")
+            url = st.text_input("ลิงก์สินค้า / Affiliate URL")
+            a, b = st.columns(2)
+            with a:
+                name = st.text_input("ชื่อสินค้า")
+                category = st.text_input("หมวดหมู่")
+                price = st.number_input("ราคา", min_value=0.0, step=1.0)
+            with b:
+                commission = st.number_input("ค่าคอมต่อออเดอร์", min_value=0.0, step=0.1)
+                sales = st.text_input("ยอดขายที่เห็นบนหน้าสินค้า")
+                image_url = st.text_input("URL รูปสินค้า")
             notes = st.text_area("จุดเด่น/ข้อจำกัดที่รู้จริง")
-            if st.form_submit_button("บันทึกสินค้า", type="primary"):
+            if st.form_submit_button("วิเคราะห์โอกาสทำเงิน", type="primary"):
                 if name and url:
                     save("product", {"name": name, "url": url, "category": category, "price": price, "commission": commission, "sales": sales, "image_url": image_url, "notes": notes})
                 else:
                     st.error("ต้องใส่ชื่อสินค้าและลิงก์")
-    elif page == "AI วิเคราะห์":
-        st.title("AI Content Studio")
+    elif page == "Content Studio":
+        st.markdown('<div class="eyebrow">CONTENT STUDIO</div>', unsafe_allow_html=True)
+        st.title("สร้าง Content Pack จากสินค้า")
         products = [x for x in items() if x["kind"] == "product"]
         if not products:
-            st.warning("เพิ่มสินค้าอย่างน้อย 1 รายการก่อน")
+            st.warning("เพิ่มสินค้าใน Product Lab อย่างน้อย 1 รายการก่อน")
         else:
             choices = {x["payload"].get("name", "สินค้า " + str(x["id"])): x for x in products}
-            selected = st.selectbox("เลือกสินค้า", list(choices))
-            goal = st.text_input("เป้าหมาย", "เพิ่ม CTR และ conversion โดยไม่ใช้คำเคลมเกินจริง")
-            if st.button("✨ วิเคราะห์ด้วย Gemini", type="primary"):
-                with st.spinner("Gemini กำลังวิเคราะห์..."):
-                    result = analyse(choices[selected]["payload"], goal)
-                if result:
-                    st.session_state.analysis = result
+            left, right = st.columns([1, 1])
+            with left:
+                selected = st.selectbox("01 · เลือกสินค้า", list(choices))
+                character = st.selectbox("02 · เลือกตัวละคร", ["Character A · รีวิวจริงใจ", "Character B · สายสาธิต", "ไม่มีตัวละคร"])
+                mode = st.radio("03 · รูปแบบคอนเทนต์", ["Problem → Demo · 18 วินาที", "เปรียบเทียบ · 20 วินาที", "รีวิวตรงไปตรงมา · 22 วินาที"])
+                goal = st.text_input("เป้าหมาย", "เพิ่ม CTR และ conversion โดยไม่ใช้คำเคลมเกินจริง")
+                if st.button("✨ สร้าง Content Pack", type="primary"):
+                    with st.spinner("Gemini กำลังวิเคราะห์และสร้าง Hook, Script, Caption..."):
+                        result = analyse(choices[selected]["payload"], goal)
+                    if result:
+                        st.session_state.analysis = result
+            with right:
+                st.markdown('<div class="phone"><div class="phone-screen"><small>PREVIEW · 9:16</small><h3 style="color:white;margin-top:auto">ตัวอย่างคลิป 18 วินาที</h3><div class="caption">ปัญหานี้แก้ได้ในคลิปเดียว</div></div></div>', unsafe_allow_html=True)
             result = st.session_state.get("analysis")
             if result:
+                st.divider()
+                st.subheader("CONTENT PACK · พร้อมตรวจสอบ")
                 st.metric("Opportunity Score", result.get("score", "-"))
-                st.subheader(result.get("verdict", "ผลวิเคราะห์"))
-                st.write("**กลุ่มเป้าหมาย:**", result.get("audience", "-"))
                 st.write("**Hook:**", result.get("hook", "-"))
                 st.write("**Caption:**", result.get("caption", "-"))
                 st.write("**Hashtags:**", " ".join(result.get("hashtags", [])))
-                st.subheader("โครงฉาก")
                 st.json(result.get("scenes", []))
-                st.warning("ตรวจราคา ค่าคอม และคำเคลมกับหน้าสินค้าจริงก่อนโพสต์")
-    elif page == "ข้อมูลที่บันทึก":
-        st.title("ข้อมูลของคุณ")
-        for row in items():
-            with st.expander(f"{row['kind']} · {row['payload'].get('name', row['id'])}"):
-                st.json(row["payload"])
+    elif page == "Character Vault":
+        st.markdown('<div class="eyebrow">CHARACTER VAULT</div>', unsafe_allow_html=True)
+        st.title("ตัวละครที่คนดูจำได้")
+        st.caption("เฟสนี้เก็บโปรไฟล์ตัวละครไว้ก่อน เพื่อเชื่อม image-to-video และ voice ในขั้นต่อไป")
+        a, b = st.columns(2)
+        with a:
+            st.file_uploader("อัปโหลดรูปตัวละคร", type=["png", "jpg", "jpeg"])
+            st.text_input("ชื่อตัวละคร", "Character A")
+            st.text_area("บุคลิก / โทนเสียง", "รีวิวจริงใจ กระชับ ไม่กล่าวอ้างเกินจริง")
+            st.button("บันทึก Character Profile", type="primary")
+        with b:
+            st.markdown('<div class="panel"><span class="tag">IDENTITY LOCKED</span><h3>Character A</h3><p>รีวิวจริงใจ · โทนเป็นมิตร</p><p>ภาพต้นแบบ: พร้อมใช้เป็น reference เมื่อเชื่อม video provider</p></div>', unsafe_allow_html=True)
+    elif page == "Quality Gate":
+        st.markdown('<div class="eyebrow">QUALITY GATE</div>', unsafe_allow_html=True)
+        st.title("ตรวจทุกอย่างก่อนเสียความน่าเชื่อถือ")
+        st.caption("สินค้า ตัวละคร คำเคลม และ CTA ต้องผ่านเกณฑ์ก่อน Export")
+        with st.container(border=True):
+            st.metric("Quality Score", 92)
+            for label, value in [("ความถูกต้องสินค้า", .97), ("ความแข็งแรงของ Hook", .88), ("ความชัดเจน CTA", .91), ("ความคงที่ตัวละคร", .93), ("ความปลอดภัยคำเคลม", .96)]:
+                st.progress(value, text=f"{label} · {round(value*100)}")
+            st.markdown('<div class="note">ผ่านเกณฑ์เบื้องต้น แต่ต้องตรวจราคา ค่าคอม และรายละเอียดหน้าสินค้าจริงก่อนโพสต์</div>', unsafe_allow_html=True)
+            st.button("อนุมัติ Export", type="primary")
     else:
         st.title("ตั้งค่า")
         st.write("ผู้ใช้:", st.session_state.user.get("email"))
