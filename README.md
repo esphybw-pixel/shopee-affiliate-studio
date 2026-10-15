@@ -1,4 +1,14 @@
-# vinext-starter
+# Shopee Affiliate Intelligence
+
+เว็บแอปสำหรับวิเคราะห์สินค้า Shopee Affiliate และสร้าง Content Pack ด้วย Gemini
+
+สถาปัตยกรรมหลักของเวอร์ชันใช้งานจริงคือ `GitHub → Streamlit Community Cloud → Supabase → Gemini API` และไม่ใช้ GPT Cloud เป็นที่รันหรือจัดเก็บข้อมูล
+
+เริ่มต้นใช้งานได้จาก [README_STREAMLIT_TH.md](README_STREAMLIT_TH.md) โดยใช้ `streamlit_app.py` เป็นไฟล์หลัก
+
+## สำคัญ
+
+โค้ดด้านล่างเป็นเอกสารจาก starter เดิมเท่านั้น ไม่ใช่เส้นทาง deploy ของแอป Streamlit เวอร์ชันนี้
 
 A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
 
